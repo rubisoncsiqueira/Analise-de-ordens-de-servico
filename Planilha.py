@@ -120,9 +120,10 @@ st.subheader("Programadas x Não Programadas")
 col_prog1, col_prog2 = st.columns(2)
 
 with col_prog1:
-    df_filtrado['Plano de Manutenção'].fillna('Não Programada', inplace=True)
-    df_filtrado['Plano de Manutenção'].replace(r'.+', 'Programada', regex=True, inplace=True)
-    os_planejamento = df_filtrado['Plano de Manutenção'].value_counts()
+    # Cria a coluna 'Status' para o gráfico de Programadas x Não Programadas
+    # Se 'Plano de Manutenção' for nulo, é 'Não Programada'. Caso contrário, é 'Programada'.
+    df_filtrado['Status'] = df_filtrado['Plano de Manutenção'].apply(lambda x: 'Não Programada' if pd.isna(x) else 'Programada')
+    os_planejamento = df_filtrado['Status'].value_counts()
     fig3 = plot_bar_chart(os_planejamento,
                           f"OS Programada x Não Programada ({ano_sel})",
                           "Status", "Quantidade de OS")
