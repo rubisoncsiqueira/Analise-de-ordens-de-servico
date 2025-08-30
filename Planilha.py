@@ -73,6 +73,18 @@ with st.expander("Prévia dos dados (primeiras 100 linhas)"):
 st.subheader("Gráfico de OS por mês")
 fig, ax = plt.subplots()
 ordens_por_mes.plot(kind="bar", ax=ax)
+
+# Adiciona o valor exato de cada mês no topo da barra
+for i, valor in enumerate(ordens_por_mes):
+    ax.text(
+        x=i, 
+        y=valor, 
+        s=str(valor), 
+        ha='center', 
+        va='bottom', 
+        fontsize=10
+    )
+
 ax.set_xlabel("Mês")
 ax.set_ylabel("Ordens de Serviço")
 ax.set_title(f"Ordens de Serviço Abertas por Mês ({ano_sel})")
@@ -85,4 +97,3 @@ buf = io.BytesIO()
 fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
 buf.seek(0)
 st.download_button("Baixar gráfico (PNG)", data=buf, file_name=f"ordens_por_mes_{ano_sel}.png", mime="image/png")
-
