@@ -1,0 +1,31 @@
+pip install pandas matplotlib openpyxl
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Lê a planilha
+df = pd.read_excel(r'C:\Users\saman\Downloads\Planilha base python.xlsx')
+
+# Converte a coluna 'Abertura' para datetime (formato dd/mm/aaaa hh:mm)
+df['Abertura'] = pd.to_datetime(df['Abertura'], dayfirst=True, errors='coerce')
+
+# Remove linhas com datas inválidas
+df = df.dropna(subset=['Abertura'])
+
+# Agrupa por número do mês (1 a 12)
+ordens_por_mes = df.groupby(df['Abertura'].dt.month).size()
+
+# Mapeia número do mês para nome do mês em português
+nomes_meses = {
+    1: 'janeiro', 2: 'fevereiro', 3: 'março', 4: 'abril',
+    5: 'maio', 6: 'junho', 7: 'julho', 8: 'agosto',
+    9: 'setembro', 10: 'outubro', 11: 'novembro', 12: 'dezembro'
+}
+ordens_por_mes.index = ordens_por_mes.index.map(nomes_meses)
+
+# Plota o gráfico
+ordens_por_mes.plot(kind='bar', xlabel='Mês', ylabel='Ordens de Serviço',
+                    title='Ordens de Serviço Abertas por Mês (2025)', color='skyblue')
+
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
