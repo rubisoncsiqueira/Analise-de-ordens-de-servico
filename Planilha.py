@@ -137,6 +137,15 @@ def plot_bar_chart(data, title, x_label, y_label):
     st.pyplot(fig, clear_figure=True)
     return fig
 
+# Nova função para gerar gráficos de pizza
+def plot_pie_chart(data, title):
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.pie(data, labels=data.index, autopct='%1.1f%%', startangle=90, colors=plt.cm.Paired.colors)
+    ax.set_title(title, fontsize=16)
+    plt.tight_layout()
+    st.pyplot(fig, clear_figure=True)
+    return fig
+
 # ===== Geração dos Gráficos =====
 st.subheader("Gráficos de Análise")
 col_graf1, col_graf2 = st.columns(2)
@@ -165,9 +174,8 @@ col_prog1, col_prog2 = st.columns(2)
 with col_prog1:
     df_filtrado['Status'] = df_filtrado['Plano de Manutenção'].apply(lambda x: 'Não Programada' if pd.isna(x) else 'Programada')
     os_planejamento = df_filtrado['Status'].value_counts()
-    fig3 = plot_bar_chart(os_planejamento,
-                          f"OS Programada x Não Programada ({ano_sel})",
-                          "Status", "Quantidade de OS")
+    fig3 = plot_pie_chart(os_planejamento,
+                          f"OS Programada x Não Programada ({ano_sel})")
 
 # Gráfico 4: OS por Técnico Resolvedor
 with col_prog2:
