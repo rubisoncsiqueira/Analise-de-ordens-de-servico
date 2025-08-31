@@ -85,16 +85,20 @@ if unidade_sel != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_sel].copy()
 
 # Filtro 3: Mês (Agora que df_filtrado existe, a variável 'MesNum' pode ser acessada)
-nomes_meses = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-               5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-               9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
-meses_list = sorted(df_filtrado['MesNum'].unique())
-meses_sel = {num: nomes_meses[num] for num in meses_list}
-mes_sel_text = st.sidebar.selectbox("Filtrar por mês", ["Todos"] + list(meses_sel.values()))
+nomes_meses_dict = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+                    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+                    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
+
+# Pega apenas os meses presentes no df_filtrado para o selectbox do mês
+meses_presentes = sorted(df_filtrado['MesNum'].unique())
+opcoes_meses_filtradas = {num: nomes_meses_dict[num] for num in meses_presentes}
+mes_sel_text = st.sidebar.selectbox("Filtrar por mês", ["Todos"] + list(opcoes_meses_filtradas.values()))
+
 
 # Aplica o último filtro, de mês
 if mes_sel_text != "Todos":
-    mes_num = list(nomes_meses.keys())[list(nomes_meses.values()).index(mes_sel_text)]
+    # Encontra o número do mês a partir do nome selecionado
+    mes_num = next(num for num, name in nomes_meses_dict.items() if name == mes_sel_text)
     df_filtrado = df_filtrado[df_filtrado['MesNum'] == mes_num].copy()
 
 if df_filtrado.empty:
@@ -104,6 +108,7 @@ if df_filtrado.empty:
 # ===== Exibição =====
 st.subheader(f"Resumo ({mes_sel_text}, {ano_sel})")
 col1, col2 = st.columns(2)
+# Recompute ordens_por_mes after all filters
 ordens_por_mes = df_filtrado.groupby("MesNum").size().reindex(range(1, 13), fill_value=0)
 col1.metric("Total de OS", int(ordens_por_mes.sum()))
 col2.metric("Média mensal", f"{ordens_por_mes.mean():.1f}")
@@ -118,11 +123,15 @@ def plot_bar_chart(data, title, x_label, y_label):
     
     # Adiciona rótulos de dados
     for i, valor in enumerate(data):
-        ax.text(i, valor, str(valor), ha='center', va='bottom', fontsize=10)
+        ax.text(i, valor, str(valor), ha='center', va='bottom', fontsize=10) # Rótulos das barras
+
+    # Aumenta a fonte do título e dos rótulos dos eixos
+    ax.set_title(title, fontsize=16) # Título do gráfico
+    ax.set_xlabel(x_label, fontsize=12) # Rótulo do eixo X
+    ax.set_ylabel(y_label, fontsize=12) # Rótulo do eixo Y
+    ax.tick_params(axis='x', labelsize=10) # Rótulos do eixo X (meses/categorias)
+    ax.tick_params(axis='y', labelsize=10) # Rótulos do eixo Y (quantidade)
     
-    ax.set_title(title)
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
     st.pyplot(fig, clear_figure=True)
@@ -134,11 +143,11 @@ col_graf1, col_graf2 = st.columns(2)
 
 # Gráfico 1: Ordens de Serviço por Mês
 with col_graf1:
-    nomes_meses_plot = {1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
-                   5: "maio", 6: "junho", 7: "julho", 8: "agosto",
-                   9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"}
-    ordens_por_mes.index = [nomes_meses_plot[m] for m in ordens_por_mes.index]
-    fig1 = plot_bar_chart(ordens_por_mes,
+    # Cria a série de ordens por mês para o gráfico (já filtrado)
+    ordens_por_mes_plot = df_filtrado.groupby("MesNum").size().reindex(range(1, 13), fill_value=0)
+    ordens_por_mes_plot.index = [nomes_meses_dict[m] for m in ordens_por_mes_plot.index]
+    
+    fig1 = plot_bar_chart(ordens_por_mes_plot,
                           f"Ordens de Serviço por Mês ({ano_sel})",
                           "Mês", "Quantidade de OS")
 
