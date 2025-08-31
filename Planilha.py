@@ -53,6 +53,11 @@ if not all(col in df.columns for col in required_columns_lower):
     st.error(f"A planilha precisa ter as colunas: {', '.join(missing_cols)}.")
     st.stop()
 
+# ----- LIMPEZA E NORMALIZAÇÃO DE DADOS -----
+# Padroniza a coluna 'prioridade' para minúsculas e remove espaços extras
+df["prioridade"] = df["prioridade"].astype(str).str.lower().str.strip()
+
+# Prepara os dados
 df["abertura"] = pd.to_datetime(df["abertura"], dayfirst=True, errors="coerce")
 df = df.dropna(subset=["abertura"]).copy()
 df["ano"] = df["abertura"].dt.year
@@ -173,9 +178,10 @@ with col_prog1:
         st.warning("Não há dados de 'Planejamento' para esta seleção.")
 
 with col_prog2:
-    # Nova lógica: considera apenas as prioridades "Alta", "Média" e "Baixa"
-    prioridades_aceitas = ['Alta', 'Média', 'Baixa']
+    # Agora a lista de prioridades aceitas está em minúsculas para corresponder aos dados limpos
+    prioridades_aceitas = ['alta', 'média', 'baixa']
     
+    # Filtra o DataFrame apenas com as prioridades desejadas
     df_prioridades = df_filtrado[df_filtrado['prioridade'].isin(prioridades_aceitas)]
     
     ordens_por_prioridade = df_prioridades['prioridade'].value_counts()
@@ -183,6 +189,9 @@ with col_prog2:
     if not ordens_por_prioridade.empty:
         # Reindexa para garantir que todas as três prioridades estejam presentes (com valor 0 se ausente)
         ordens_por_prioridade = ordens_por_prioridade.reindex(prioridades_aceitas, fill_value=0)
+        
+        # Mapeia os índices de volta para o formato com a primeira letra maiúscula para o gráfico
+        ordens_por_prioridade.index = ['Alta', 'Média', 'Baixa']
         
         fig4 = plot_bar_chart(ordens_por_prioridade,
                               f"Ordens de Serviço por Prioridade ({ano_sel})",
