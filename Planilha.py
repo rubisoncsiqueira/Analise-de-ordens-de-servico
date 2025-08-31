@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
+import numpy as np # Importação do NumPy
 
 st.set_page_config(page_title="Análise de Ordens de Serviço", page_icon="📊", layout="wide")
 
@@ -117,9 +118,9 @@ with st.expander("Prévia dos dados (primeiras 100 linhas)"):
     st.dataframe(df_filtrado.head(100))
 
 # Função para gerar gráficos de barras
-def plot_bar_chart(data, title, x_label, y_label):
+def plot_bar_chart(data, title, x_label, y_label, add_trendline=False):
     fig, ax = plt.subplots(figsize=(10, 6))
-    data.plot(kind="bar", ax=ax, color='skyblue')
+    data.plot(kind="bar", ax=ax, color='skyblue', label='OS por Mês')
     
     # Adiciona rótulos de dados
     for i, valor in enumerate(data):
@@ -131,6 +132,14 @@ def plot_bar_chart(data, title, x_label, y_label):
     ax.set_ylabel(y_label, fontsize=12) # Rótulo do eixo Y
     ax.tick_params(axis='x', labelsize=10) # Rótulos do eixo X (meses/categorias)
     ax.tick_params(axis='y', labelsize=10) # Rótulos do eixo Y (quantidade)
+    
+    # Adiciona a linha de tendência se a flag for True
+    if add_trendline:
+        x = np.arange(len(data))
+        z = np.polyfit(x, data.values, 1)
+        p = np.poly1d(z)
+        ax.plot(x, p(x), "r--", label="Linha de Tendência")
+        ax.legend()
     
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
@@ -150,7 +159,7 @@ def plot_pie_chart(data, title):
 st.subheader("Gráficos de Análise")
 col_graf1, col_graf2 = st.columns(2)
 
-# Gráfico 1: Ordens de Serviço por Mês
+# Gráfico 1: Ordens de Serviço por Mês (agora com linha de tendência)
 with col_graf1:
     # Cria a série de ordens por mês para o gráfico (já filtrado)
     ordens_por_mes_plot = df_filtrado.groupby("MesNum").size().reindex(range(1, 13), fill_value=0)
@@ -158,7 +167,7 @@ with col_graf1:
     
     fig1 = plot_bar_chart(ordens_por_mes_plot,
                           f"Ordens de Serviço por Mês ({ano_sel})",
-                          "Mês", "Quantidade de OS")
+                          "Mês", "Quantidade de OS", add_trendline=True)
 
 # Gráfico 2: Quantidade de OS por Tipo
 with col_graf2:
