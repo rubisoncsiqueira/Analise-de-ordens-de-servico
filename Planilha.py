@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
-import numpy as np # Importação do NumPy
+import numpy as np
 
 st.set_page_config(page_title="Análise de Ordens de Serviço", page_icon="📊", layout="wide")
 
@@ -137,7 +137,7 @@ def plot_bar_chart(data, title, x_label, y_label, add_trendline=False):
     if add_trendline:
         # Filtra apenas os meses com valores maiores que zero para o cálculo da tendência
         data_valid = data[data > 0]
-        if not data_valid.empty:
+        if not data_valid.empty and len(data_valid) > 1: # Verificação para garantir que há pelo menos 2 pontos
             # Usa os números dos meses como eixo X para o cálculo
             x = data_valid.index.values
             y = data_valid.values
