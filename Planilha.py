@@ -98,11 +98,9 @@ col2.metric("Média mensal", f"{ordens_por_mes.mean():.1f}")
 with st.expander("Prévia dos dados (primeiras 100 linhas)"):
     st.dataframe(df_filtrado.head(100))
 
-# Função para gerar gráficos de barras
 def plot_bar_chart(data, title, x_label, y_label, p=None):
     fig, ax = plt.subplots(figsize=(10, 6))
     
-    # Use ax.bar() para plotar, passando os dados e os rótulos separadamente
     ax.bar(data.index, data.values, color='skyblue')
     
     for i, valor in enumerate(data.values):
@@ -112,7 +110,6 @@ def plot_bar_chart(data, title, x_label, y_label, p=None):
     ax.set_xlabel(x_label, fontsize=12)
     ax.set_ylabel(y_label, fontsize=12)
     
-    # Acessa o índice da série para usar como rótulos no eixo x
     ax.set_xticks(range(len(data.index)))
     ax.set_xticklabels(data.index, rotation=45, ha='right')
     
@@ -176,18 +173,22 @@ with col_prog1:
         st.warning("Não há dados de 'Planejamento' para esta seleção.")
 
 with col_prog2:
-    ordens_por_prioridade = df_filtrado["prioridade"].value_counts()
+    # Nova lógica: considera apenas as prioridades "Alta", "Média" e "Baixa"
+    prioridades_aceitas = ['Alta', 'Média', 'Baixa']
+    
+    df_prioridades = df_filtrado[df_filtrado['prioridade'].isin(prioridades_aceitas)]
+    
+    ordens_por_prioridade = df_prioridades['prioridade'].value_counts()
+    
     if not ordens_por_prioridade.empty:
-        prioridade_ordem = ['Urgente', 'Alta', 'Média', 'Baixa', 'Não-classificada']
-        
-        ordens_existentes_ordenadas = [p for p in prioridade_ordem if p in ordens_por_prioridade.index]
-        ordens_por_prioridade = ordens_por_prioridade.reindex(ordens_existentes_ordenadas)
+        # Reindexa para garantir que todas as três prioridades estejam presentes (com valor 0 se ausente)
+        ordens_por_prioridade = ordens_por_prioridade.reindex(prioridades_aceitas, fill_value=0)
         
         fig4 = plot_bar_chart(ordens_por_prioridade,
                               f"Ordens de Serviço por Prioridade ({ano_sel})",
                               "Prioridade", "Quantidade de OS")
     else:
-        st.warning("Não há dados de 'Prioridade' para esta seleção.")
+        st.warning("Não há dados de 'Prioridade' (Alta, Média, Baixa) para esta seleção.")
 
 st.subheader("Análise de Técnicos")
 col_tec1, _ = st.columns(2)
