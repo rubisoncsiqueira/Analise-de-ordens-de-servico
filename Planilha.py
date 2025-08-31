@@ -118,35 +118,27 @@ with st.expander("Prévia dos dados (primeiras 100 linhas)"):
     st.dataframe(df_filtrado.head(100))
 
 # Função para gerar gráficos de barras
-def plot_bar_chart(data, title, x_label, y_label, add_trendline=False):
+def plot_bar_chart(data, title, x_label, y_label, p=None):
     fig, ax = plt.subplots(figsize=(10, 6))
-    data.plot(kind="bar", ax=ax, color='skyblue', label='OS por Mês')
+    data.plot(kind="bar", ax=ax, color='skyblue')
     
     # Adiciona rótulos de dados
     for i, valor in enumerate(data):
-        ax.text(i, valor, str(valor), ha='center', va='bottom', fontsize=10) # Rótulos das barras
+        ax.text(i, valor, str(valor), ha='center', va='bottom', fontsize=10)
 
     # Aumenta a fonte do título e dos rótulos dos eixos
-    ax.set_title(title, fontsize=16) # Título do gráfico
-    ax.set_xlabel(x_label, fontsize=12) # Rótulo do eixo X
-    ax.set_ylabel(y_label, fontsize=12) # Rótulo do eixo Y
-    ax.tick_params(axis='x', labelsize=10) # Rótulos do eixo X (meses/categorias)
-    ax.tick_params(axis='y', labelsize=10) # Rótulos do eixo Y (quantidade)
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel(x_label, fontsize=12)
+    ax.set_ylabel(y_label, fontsize=12)
+    ax.tick_params(axis='x', labelsize=10)
+    ax.tick_params(axis='y', labelsize=10)
     
-    # Adiciona a linha de tendência se a flag for True
-    if add_trendline:
-        # Filtra apenas os meses com valores maiores que zero para o cálculo da tendência
-        data_valid = data[data > 0]
-        if not data_valid.empty and len(data_valid) > 1: # Verificação para garantir que há pelo menos 2 pontos
-            # Usa os números dos meses como eixo X para o cálculo
-            x = data_valid.index.values
-            y = data_valid.values
-            z = np.polyfit(x, y, 1)
-            p = np.poly1d(z)
-
-            # Plota a linha de tendência sobre todos os meses
-            ax.plot(data.index, p(data.index), "r--", label="Linha de Tendência")
-            ax.legend()
+    # Se a linha de tendência foi calculada, plota ela aqui
+    if p:
+        # Usa o índice numérico (1-12) para plotar a linha sobre os meses
+        x_trend = np.arange(1, 13)
+        ax.plot(x_trend - 1, p(x_trend), "r--", label="Linha de Tendência")
+        ax.legend()
     
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
@@ -166,15 +158,27 @@ def plot_pie_chart(data, title):
 st.subheader("Gráficos de Análise")
 col_graf1, col_graf2 = st.columns(2)
 
-# Gráfico 1: Ordens de Serviço por Mês (agora com linha de tendência)
+# Gráfico 1: Ordens de Serviço por Mês
 with col_graf1:
-    # Cria a série de ordens por mês para o gráfico (já filtrado)
-    ordens_por_mes_plot = df_filtrado.groupby("MesNum").size().reindex(range(1, 13), fill_value=0)
+    # 1. Cria a série com o índice numérico (1-12)
+    ordens_por_mes_num = df_filtrado.groupby("MesNum").size()
+    
+    p = None
+    # 2. Calcula a linha de tendência com os dados numéricos antes de reindexar
+    if len(ordens_por_mes_num) > 1:
+        x_trend = ordens_por_mes_num.index.values
+        y_trend = ordens_por_mes_num.values
+        z = np.polyfit(x_trend, y_trend, 1)
+        p = np.poly1d(z)
+
+    # 3. Reindexa e altera o índice para nomes de meses para o plot
+    ordens_por_mes_plot = ordens_por_mes_num.reindex(range(1, 13), fill_value=0)
     ordens_por_mes_plot.index = [nomes_meses_dict[m] for m in ordens_por_mes_plot.index]
     
+    # 4. Chama a função de plotagem, passando a função de tendência
     fig1 = plot_bar_chart(ordens_por_mes_plot,
                           f"Ordens de Serviço por Mês ({ano_sel})",
-                          "Mês", "Quantidade de OS", add_trendline=True)
+                          "Mês", "Quantidade de OS", p=p)
 
 # Gráfico 2: Quantidade de OS por Tipo
 with col_graf2:
