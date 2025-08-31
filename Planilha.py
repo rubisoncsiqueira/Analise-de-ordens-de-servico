@@ -42,7 +42,7 @@ try:
     if hasattr(file_to_read, 'seek'):
         file_to_read.seek(0)
     df = pd.read_excel(file_to_read)
-    # Converte os nomes das colunas para minúsculas
+    # Converte os nomes das colunas para minúsculas para padronização
     df.columns = [col.lower() for col in df.columns]
 except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
@@ -61,7 +61,7 @@ df = df.dropna(subset=["abertura"]).copy()
 df["ano"] = df["abertura"].dt.year
 df["mesnum"] = df["abertura"].dt.month
 
-# Normaliza e cria a coluna 'Unidade'
+# Normaliza e cria a coluna 'unidade'
 df["unidade"] = df["setor"].str.split('_').str[0].str.strip()
 df["unidade"] = df["unidade"].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
 
@@ -190,7 +190,9 @@ with col_prog2:
     ordens_por_prioridade = df_filtrado["prioridade"].value_counts()
     if not ordens_por_prioridade.empty:
         prioridade_ordem = ['Urgente', 'Alta', 'Média', 'Baixa', 'Não-classificada']
-        ordens_por_prioridade = ordens_por_prioridade.reindex(prioridade_ordem, fill_value=0)
+        
+        ordens_existentes_ordenadas = [p for p in prioridade_ordem if p in ordens_por_prioridade.index]
+        ordens_por_prioridade = ordens_por_prioridade.reindex(ordens_existentes_ordenadas)
         
         fig4 = plot_bar_chart(ordens_por_prioridade,
                               f"Ordens de Serviço por Prioridade ({ano_sel})",
@@ -215,7 +217,6 @@ with col_tec1:
 
 # ===== Download dos Gráficos =====
 st.sidebar.header("Download")
-# Usa um dicionário para garantir que os objetos de figura existem
 fig_objects = {"Mês": fig1, "Tipo": None, "Planejamento": None, "Prioridade": None, "Técnico": None}
 if 'fig2' in locals(): fig_objects["Tipo"] = fig2
 if 'fig3' in locals(): fig_objects["Planejamento"] = fig3
