@@ -69,12 +69,22 @@ df["Unidade"] = df["Unidade"].str.normalize('NFKD').str.encode('ascii', errors='
 
 # Sidebar: filtros
 st.sidebar.header("Filtros")
+
+# Filtro 1: Ano
 anos = sorted(df["Ano"].dropna().unique())
 ano_sel = st.sidebar.selectbox("Filtrar por ano", anos, index=len(anos) - 1 if anos else 0)
+df_temp = df[df["Ano"] == ano_sel].copy()
 
-unidades = sorted(df["Unidade"].dropna().unique())
+# Filtro 2: Unidade
+unidades = sorted(df_temp["Unidade"].dropna().unique())
 unidade_sel = st.sidebar.selectbox("Filtrar por unidade", ["Todas"] + unidades)
 
+# Cria o DataFrame filtrado final
+df_filtrado = df_temp.copy()
+if unidade_sel != "Todas":
+    df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_sel].copy()
+
+# Filtro 3: Mês (Agora que df_filtrado existe, a variável 'MesNum' pode ser acessada)
 nomes_meses = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
                5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
                9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
@@ -82,10 +92,7 @@ meses_list = sorted(df_filtrado['MesNum'].unique())
 meses_sel = {num: nomes_meses[num] for num in meses_list}
 mes_sel_text = st.sidebar.selectbox("Filtrar por mês", ["Todos"] + list(meses_sel.values()))
 
-# Aplica os filtros
-df_filtrado = df[df["Ano"] == ano_sel].copy()
-if unidade_sel != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_sel].copy()
+# Aplica o último filtro, de mês
 if mes_sel_text != "Todos":
     mes_num = list(nomes_meses.keys())[list(nomes_meses.values()).index(mes_sel_text)]
     df_filtrado = df_filtrado[df_filtrado['MesNum'] == mes_num].copy()
@@ -127,10 +134,10 @@ col_graf1, col_graf2 = st.columns(2)
 
 # Gráfico 1: Ordens de Serviço por Mês
 with col_graf1:
-    nomes_meses = {1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
+    nomes_meses_plot = {1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
                    5: "maio", 6: "junho", 7: "julho", 8: "agosto",
                    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"}
-    ordens_por_mes.index = [nomes_meses[m] for m in ordens_por_mes.index]
+    ordens_por_mes.index = [nomes_meses_plot[m] for m in ordens_por_mes.index]
     fig1 = plot_bar_chart(ordens_por_mes,
                           f"Ordens de Serviço por Mês ({ano_sel})",
                           "Mês", "Quantidade de OS")
