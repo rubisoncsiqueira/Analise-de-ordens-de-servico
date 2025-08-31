@@ -135,11 +135,18 @@ def plot_bar_chart(data, title, x_label, y_label, add_trendline=False):
     
     # Adiciona a linha de tendência se a flag for True
     if add_trendline:
-        x = np.arange(len(data))
-        z = np.polyfit(x, data.values, 1)
-        p = np.poly1d(z)
-        ax.plot(x, p(x), "r--", label="Linha de Tendência")
-        ax.legend()
+        # Filtra apenas os meses com valores maiores que zero para o cálculo da tendência
+        data_valid = data[data > 0]
+        if not data_valid.empty:
+            # Usa os números dos meses como eixo X para o cálculo
+            x = data_valid.index.values
+            y = data_valid.values
+            z = np.polyfit(x, y, 1)
+            p = np.poly1d(z)
+
+            # Plota a linha de tendência sobre todos os meses
+            ax.plot(data.index, p(data.index), "r--", label="Linha de Tendência")
+            ax.legend()
     
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
