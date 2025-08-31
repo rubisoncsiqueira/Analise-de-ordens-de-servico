@@ -98,25 +98,31 @@ col2.metric("Média mensal", f"{ordens_por_mes.mean():.1f}")
 with st.expander("Prévia dos dados (primeiras 100 linhas)"):
     st.dataframe(df_filtrado.head(100))
 
+# Função para gerar gráficos de barras
 def plot_bar_chart(data, title, x_label, y_label, p=None):
     fig, ax = plt.subplots(figsize=(10, 6))
-    data.plot(kind="bar", ax=ax, color='skyblue')
     
-    for i, valor in enumerate(data):
+    # Use ax.bar() para plotar, passando os dados e os rótulos separadamente
+    ax.bar(data.index, data.values, color='skyblue')
+    
+    for i, valor in enumerate(data.values):
         ax.text(i, valor, str(int(valor)), ha='center', va='bottom', fontsize=10)
 
     ax.set_title(title, fontsize=16)
     ax.set_xlabel(x_label, fontsize=12)
     ax.set_ylabel(y_label, fontsize=12)
-    ax.tick_params(axis='x', labelsize=10)
+    
+    # Acessa o índice da série para usar como rótulos no eixo x
+    ax.set_xticks(range(len(data.index)))
+    ax.set_xticklabels(data.index, rotation=45, ha='right')
+    
     ax.tick_params(axis='y', labelsize=10)
     
     if p:
-        x_trend = np.arange(len(data))
+        x_trend = np.arange(len(data.index))
         ax.plot(x_trend, p(x_trend + 1), "r--", label="Linha de Tendência")
         ax.legend()
     
-    plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
     st.pyplot(fig, clear_figure=True)
     return fig
@@ -177,27 +183,9 @@ with col_prog2:
         ordens_existentes_ordenadas = [p for p in prioridade_ordem if p in ordens_por_prioridade.index]
         ordens_por_prioridade = ordens_por_prioridade.reindex(ordens_existentes_ordenadas)
         
-        # Cria uma nova figura para o gráfico de barras
-        fig4, ax = plt.subplots(figsize=(10, 6))
-        
-        # Plota os dados com um índice numérico
-        ordens_por_prioridade.plot(kind="bar", ax=ax, color='skyblue')
-        
-        # Adiciona os rótulos de dados
-        for i, valor in enumerate(ordens_por_prioridade):
-            ax.text(i, valor, str(int(valor)), ha='center', va='bottom', fontsize=10)
-        
-        # Configurações do gráfico
-        ax.set_title(f"Ordens de Serviço por Prioridade ({ano_sel})", fontsize=16)
-        ax.set_xlabel("Prioridade", fontsize=12)
-        ax.set_ylabel("Quantidade de OS", fontsize=12)
-        
-        # Define os ticks do eixo X usando os nomes das prioridades
-        ax.set_xticks(range(len(ordens_existentes_ordenadas)))
-        ax.set_xticklabels(ordens_existentes_ordenadas, rotation=45, ha='right')
-        
-        plt.tight_layout()
-        st.pyplot(fig4)
+        fig4 = plot_bar_chart(ordens_por_prioridade,
+                              f"Ordens de Serviço por Prioridade ({ano_sel})",
+                              "Prioridade", "Quantidade de OS")
     else:
         st.warning("Não há dados de 'Prioridade' para esta seleção.")
 
