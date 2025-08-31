@@ -75,17 +75,27 @@ ano_sel = st.sidebar.selectbox("Filtrar por ano", anos, index=len(anos) - 1 if a
 unidades = sorted(df["Unidade"].dropna().unique())
 unidade_sel = st.sidebar.selectbox("Filtrar por unidade", ["Todas"] + unidades)
 
+nomes_meses = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+               5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+               9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
+meses_list = sorted(df_filtrado['MesNum'].unique())
+meses_sel = {num: nomes_meses[num] for num in meses_list}
+mes_sel_text = st.sidebar.selectbox("Filtrar por mês", ["Todos"] + list(meses_sel.values()))
+
 # Aplica os filtros
 df_filtrado = df[df["Ano"] == ano_sel].copy()
 if unidade_sel != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_sel].copy()
+if mes_sel_text != "Todos":
+    mes_num = list(nomes_meses.keys())[list(nomes_meses.values()).index(mes_sel_text)]
+    df_filtrado = df_filtrado[df_filtrado['MesNum'] == mes_num].copy()
 
 if df_filtrado.empty:
     st.warning("Nenhum dado encontrado para os filtros selecionados.")
     st.stop()
 
 # ===== Exibição =====
-st.subheader(f"Resumo ({ano_sel})")
+st.subheader(f"Resumo ({mes_sel_text}, {ano_sel})")
 col1, col2 = st.columns(2)
 ordens_por_mes = df_filtrado.groupby("MesNum").size().reindex(range(1, 13), fill_value=0)
 col1.metric("Total de OS", int(ordens_por_mes.sum()))
