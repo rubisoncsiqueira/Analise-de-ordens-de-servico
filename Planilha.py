@@ -177,14 +177,27 @@ with col_prog2:
         ordens_existentes_ordenadas = [p for p in prioridade_ordem if p in ordens_por_prioridade.index]
         ordens_por_prioridade = ordens_por_prioridade.reindex(ordens_existentes_ordenadas)
         
-        # Correção: redefinir o índice para que o Matplotlib possa plotar
-        ordens_por_prioridade.index = range(len(ordens_por_prioridade))
+        # Cria uma nova figura para o gráfico de barras
+        fig4, ax = plt.subplots(figsize=(10, 6))
         
-        fig4 = plot_bar_chart(ordens_por_prioridade,
-                              f"Ordens de Serviço por Prioridade ({ano_sel})",
-                              "Prioridade", "Quantidade de OS")
-        # Ajusta os ticks do eixo X para mostrar os nomes das prioridades
-        plt.xticks(ticks=range(len(ordens_existentes_ordenadas)), labels=ordens_existentes_ordenadas)
+        # Plota os dados com um índice numérico
+        ordens_por_prioridade.plot(kind="bar", ax=ax, color='skyblue')
+        
+        # Adiciona os rótulos de dados
+        for i, valor in enumerate(ordens_por_prioridade):
+            ax.text(i, valor, str(int(valor)), ha='center', va='bottom', fontsize=10)
+        
+        # Configurações do gráfico
+        ax.set_title(f"Ordens de Serviço por Prioridade ({ano_sel})", fontsize=16)
+        ax.set_xlabel("Prioridade", fontsize=12)
+        ax.set_ylabel("Quantidade de OS", fontsize=12)
+        
+        # Define os ticks do eixo X usando os nomes das prioridades
+        ax.set_xticks(range(len(ordens_existentes_ordenadas)))
+        ax.set_xticklabels(ordens_existentes_ordenadas, rotation=45, ha='right')
+        
+        plt.tight_layout()
+        st.pyplot(fig4)
     else:
         st.warning("Não há dados de 'Prioridade' para esta seleção.")
 
@@ -202,7 +215,8 @@ with col_tec1:
 
 
 st.sidebar.header("Download")
-fig_objects = {"Mês": fig1, "Tipo": None, "Planejamento": None, "Prioridade": None, "Técnico": None}
+fig_objects = {"Mês": None, "Tipo": None, "Planejamento": None, "Prioridade": None, "Técnico": None}
+if 'fig1' in locals(): fig_objects["Mês"] = fig1
 if 'fig2' in locals(): fig_objects["Tipo"] = fig2
 if 'fig3' in locals(): fig_objects["Planejamento"] = fig3
 if 'fig4' in locals(): fig_objects["Prioridade"] = fig4
