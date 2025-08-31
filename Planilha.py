@@ -17,9 +17,8 @@ if 'file_uploaded' not in st.session_state:
 
 # ===== Entrada de dados =====
 file_to_read = None
-
-# Tenta carregar o arquivo padrão primeiro
 default_path = Path("dados/Planilha_base_python.xlsx")
+
 if default_path.exists():
     file_to_read = default_path.open("rb")
     st.session_state.file_to_read = default_path.open("rb")
@@ -27,7 +26,6 @@ if default_path.exists():
 else:
     st.session_state.file_to_read = None
 
-# Se o arquivo padrão não existe ou não foi carregado, exibe o uploader
 if st.session_state.file_to_read is None:
     uploaded = st.file_uploader("Selecione a planilha (.xlsx)", type=["xlsx"])
     if uploaded is not None:
@@ -44,54 +42,56 @@ try:
     if hasattr(file_to_read, 'seek'):
         file_to_read.seek(0)
     df = pd.read_excel(file_to_read)
+    # Converte os nomes das colunas para minúsculas
+    df.columns = [col.lower() for col in df.columns]
 except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
     st.stop()
 
-# Validação básica e nova verificação para a coluna 'Prioridade'
-required_columns = ["Abertura", "Tipo de Manutenção", "Plano de Manutenção", "Técnico Resolvedor", "Setor", "Prioridade"]
-if not all(col in df.columns for col in required_columns):
-    missing_cols = [col for col in required_columns if col not in df.columns]
+# Validação das colunas requeridas (agora em minúsculas)
+required_columns_lower = ["abertura", "tipo de manutenção", "plano de manutenção", "técnico resolvedor", "setor", "prioridade"]
+if not all(col in df.columns for col in required_columns_lower):
+    missing_cols = [col for col in required_columns_lower if col not in df.columns]
     st.error(f"A planilha precisa ter as colunas: {', '.join(missing_cols)}.")
     st.stop()
 
 # Prepara os dados
-df["Abertura"] = pd.to_datetime(df["Abertura"], dayfirst=True, errors="coerce")
-df = df.dropna(subset=["Abertura"]).copy()
-df["Ano"] = df["Abertura"].dt.year
-df["MesNum"] = df["Abertura"].dt.month
+df["abertura"] = pd.to_datetime(df["abertura"], dayfirst=True, errors="coerce")
+df = df.dropna(subset=["abertura"]).copy()
+df["ano"] = df["abertura"].dt.year
+df["mesnum"] = df["abertura"].dt.month
 
 # Normaliza e cria a coluna 'Unidade'
-df["Unidade"] = df["Setor"].str.split('_').str[0].str.strip()
-df["Unidade"] = df["Unidade"].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
+df["unidade"] = df["setor"].str.split('_').str[0].str.strip()
+df["unidade"] = df["unidade"].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
 
 # Sidebar: filtros
 st.sidebar.header("Filtros")
 
 # Filtro 1: Ano
-anos = sorted(df["Ano"].dropna().unique())
+anos = sorted(df["ano"].dropna().unique())
 ano_sel = st.sidebar.selectbox("Filtrar por ano", anos, index=len(anos) - 1 if anos else 0)
-df_temp = df[df["Ano"] == ano_sel].copy()
+df_temp = df[df["ano"] == ano_sel].copy()
 
 # Filtro 2: Unidade
-unidades = sorted(df_temp["Unidade"].dropna().unique())
+unidades = sorted(df_temp["unidade"].dropna().unique())
 unidade_sel = st.sidebar.selectbox("Filtrar por unidade", ["Todas"] + unidades)
 
 df_filtrado = df_temp.copy()
 if unidade_sel != "Todas":
-    df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_sel].copy()
+    df_filtrado = df_filtrado[df_filtrado["unidade"] == unidade_sel].copy()
 
 # Filtro 3: Mês
 nomes_meses_dict = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
                     5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
                     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
-meses_presentes = sorted(df_filtrado['MesNum'].unique())
+meses_presentes = sorted(df_filtrado['mesnum'].unique())
 opcoes_meses_filtradas = {num: nomes_meses_dict[num] for num in meses_presentes}
 mes_sel_text = st.sidebar.selectbox("Filtrar por mês", ["Todos"] + list(opcoes_meses_filtradas.values()))
 
 if mes_sel_text != "Todos":
     mes_num = next(num for num, name in nomes_meses_dict.items() if name == mes_sel_text)
-    df_filtrado = df_filtrado[df_filtrado['MesNum'] == mes_num].copy()
+    df_filtrado = df_filtrado[df_filtrado['mesnum'] == mes_num].copy()
 
 if df_filtrado.empty:
     st.warning("Nenhum dado encontrado para os filtros selecionados.")
@@ -100,7 +100,7 @@ if df_filtrado.empty:
 # ===== Exibição =====
 st.subheader(f"Resumo ({mes_sel_text}, {ano_sel})")
 col1, col2 = st.columns(2)
-ordens_por_mes = df_filtrado.groupby("MesNum").size().reindex(range(1, 13), fill_value=0)
+ordens_por_mes = df_filtrado.groupby("mesnum").size().reindex(range(1, 13), fill_value=0)
 col1.metric("Total de OS", int(ordens_por_mes.sum()))
 col2.metric("Média mensal", f"{ordens_por_mes.mean():.1f}")
 
@@ -146,7 +146,7 @@ col_graf1, col_graf2 = st.columns(2)
 
 # Gráfico 1: Ordens de Serviço por Mês
 with col_graf1:
-    ordens_por_mes_num = df_filtrado.groupby("MesNum").size()
+    ordens_por_mes_num = df_filtrado.groupby("mesnum").size()
     p = None
     if len(ordens_por_mes_num) > 1:
         x_trend = ordens_por_mes_num.index.values
@@ -163,7 +163,7 @@ with col_graf1:
 
 # Gráfico 2: Quantidade de OS por Tipo
 with col_graf2:
-    ordens_por_tipo = df_filtrado["Tipo de Manutenção"].value_counts().head(10)
+    ordens_por_tipo = df_filtrado["tipo de manutenção"].value_counts().head(10)
     if not ordens_por_tipo.empty:
         fig2 = plot_bar_chart(ordens_por_tipo,
                               f"Top 10 OS por Tipo de Manutenção ({ano_sel})",
@@ -177,8 +177,8 @@ col_prog1, col_prog2 = st.columns(2)
 
 # Gráfico 3: OS Programada x Não Programada
 with col_prog1:
-    df_filtrado['Status'] = df_filtrado['Plano de Manutenção'].apply(lambda x: 'Não Programada' if pd.isna(x) else 'Programada')
-    os_planejamento = df_filtrado['Status'].value_counts()
+    df_filtrado['status'] = df_filtrado['plano de manutenção'].apply(lambda x: 'Não Programada' if pd.isna(x) else 'Programada')
+    os_planejamento = df_filtrado['status'].value_counts()
     if not os_planejamento.empty:
         fig3 = plot_pie_chart(os_planejamento,
                               f"OS Programada x Não Programada ({ano_sel})")
@@ -187,7 +187,7 @@ with col_prog1:
 
 # Gráfico 4: OS por Prioridade
 with col_prog2:
-    ordens_por_prioridade = df_filtrado["Prioridade"].value_counts()
+    ordens_por_prioridade = df_filtrado["prioridade"].value_counts()
     if not ordens_por_prioridade.empty:
         prioridade_ordem = ['Urgente', 'Alta', 'Média', 'Baixa', 'Não-classificada']
         ordens_por_prioridade = ordens_por_prioridade.reindex(prioridade_ordem, fill_value=0)
@@ -204,7 +204,7 @@ col_tec1, _ = st.columns(2)
 
 # Gráfico 5: OS por Técnico Resolvedor
 with col_tec1:
-    ordens_por_tecnico = df_filtrado["Técnico Resolvedor"].value_counts().head(10)
+    ordens_por_tecnico = df_filtrado["técnico resolvedor"].value_counts().head(10)
     if not ordens_por_tecnico.empty:
         fig5 = plot_bar_chart(ordens_por_tecnico,
                               f"Top 10 OS por Técnico Resolvedor ({ano_sel})",
@@ -215,8 +215,15 @@ with col_tec1:
 
 # ===== Download dos Gráficos =====
 st.sidebar.header("Download")
-for title, fig in [("Mês", fig1), ("Tipo", fig2), ("Planejamento", fig3), ("Prioridade", fig4), ("Técnico", fig5)]:
-    if fig: # Verifica se a figura foi criada
+# Usa um dicionário para garantir que os objetos de figura existem
+fig_objects = {"Mês": fig1, "Tipo": None, "Planejamento": None, "Prioridade": None, "Técnico": None}
+if 'fig2' in locals(): fig_objects["Tipo"] = fig2
+if 'fig3' in locals(): fig_objects["Planejamento"] = fig3
+if 'fig4' in locals(): fig_objects["Prioridade"] = fig4
+if 'fig5' in locals(): fig_objects["Técnico"] = fig5
+
+for title, fig in fig_objects.items():
+    if fig:
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
         buf.seek(0)
