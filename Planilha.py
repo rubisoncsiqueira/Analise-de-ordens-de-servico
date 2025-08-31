@@ -42,38 +42,31 @@ try:
     if hasattr(file_to_read, 'seek'):
         file_to_read.seek(0)
     df = pd.read_excel(file_to_read)
-    # Converte os nomes das colunas para minúsculas para padronização
     df.columns = [col.lower() for col in df.columns]
 except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
     st.stop()
 
-# Validação das colunas requeridas (agora em minúsculas)
 required_columns_lower = ["abertura", "tipo de manutenção", "plano de manutenção", "técnico resolvedor", "setor", "prioridade"]
 if not all(col in df.columns for col in required_columns_lower):
     missing_cols = [col for col in required_columns_lower if col not in df.columns]
     st.error(f"A planilha precisa ter as colunas: {', '.join(missing_cols)}.")
     st.stop()
 
-# Prepara os dados
 df["abertura"] = pd.to_datetime(df["abertura"], dayfirst=True, errors="coerce")
 df = df.dropna(subset=["abertura"]).copy()
 df["ano"] = df["abertura"].dt.year
 df["mesnum"] = df["abertura"].dt.month
 
-# Normaliza e cria a coluna 'unidade'
 df["unidade"] = df["setor"].str.split('_').str[0].str.strip()
 df["unidade"] = df["unidade"].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
 
-# Sidebar: filtros
 st.sidebar.header("Filtros")
 
-# Filtro 1: Ano
 anos = sorted(df["ano"].dropna().unique())
 ano_sel = st.sidebar.selectbox("Filtrar por ano", anos, index=len(anos) - 1 if anos else 0)
 df_temp = df[df["ano"] == ano_sel].copy()
 
-# Filtro 2: Unidade
 unidades = sorted(df_temp["unidade"].dropna().unique())
 unidade_sel = st.sidebar.selectbox("Filtrar por unidade", ["Todas"] + unidades)
 
@@ -81,7 +74,6 @@ df_filtrado = df_temp.copy()
 if unidade_sel != "Todas":
     df_filtrado = df_filtrado[df_filtrado["unidade"] == unidade_sel].copy()
 
-# Filtro 3: Mês
 nomes_meses_dict = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
                     5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
                     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
@@ -97,7 +89,6 @@ if df_filtrado.empty:
     st.warning("Nenhum dado encontrado para os filtros selecionados.")
     st.stop()
 
-# ===== Exibição =====
 st.subheader(f"Resumo ({mes_sel_text}, {ano_sel})")
 col1, col2 = st.columns(2)
 ordens_por_mes = df_filtrado.groupby("mesnum").size().reindex(range(1, 13), fill_value=0)
@@ -107,7 +98,6 @@ col2.metric("Média mensal", f"{ordens_por_mes.mean():.1f}")
 with st.expander("Prévia dos dados (primeiras 100 linhas)"):
     st.dataframe(df_filtrado.head(100))
 
-# Função para gerar gráficos de barras
 def plot_bar_chart(data, title, x_label, y_label, p=None):
     fig, ax = plt.subplots(figsize=(10, 6))
     data.plot(kind="bar", ax=ax, color='skyblue')
@@ -131,7 +121,6 @@ def plot_bar_chart(data, title, x_label, y_label, p=None):
     st.pyplot(fig, clear_figure=True)
     return fig
 
-# Função para gerar gráficos de pizza
 def plot_pie_chart(data, title):
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.pie(data, labels=data.index, autopct='%1.1f%%', startangle=90, colors=plt.cm.Paired.colors)
@@ -140,11 +129,9 @@ def plot_pie_chart(data, title):
     st.pyplot(fig, clear_figure=True)
     return fig
 
-# ===== Geração dos Gráficos =====
 st.subheader("Gráficos de Análise")
 col_graf1, col_graf2 = st.columns(2)
 
-# Gráfico 1: Ordens de Serviço por Mês
 with col_graf1:
     ordens_por_mes_num = df_filtrado.groupby("mesnum").size()
     p = None
@@ -161,7 +148,6 @@ with col_graf1:
                           f"Ordens de Serviço por Mês ({ano_sel})",
                           "Mês", "Quantidade de OS", p=p)
 
-# Gráfico 2: Quantidade de OS por Tipo
 with col_graf2:
     ordens_por_tipo = df_filtrado["tipo de manutenção"].value_counts().head(10)
     if not ordens_por_tipo.empty:
@@ -171,11 +157,9 @@ with col_graf2:
     else:
         st.warning("Não há dados de 'Tipo de Manutenção' para esta seleção.")
 
-# ---
 st.subheader("Análise de Prioridade e Planejamento")
 col_prog1, col_prog2 = st.columns(2)
 
-# Gráfico 3: OS Programada x Não Programada
 with col_prog1:
     df_filtrado['status'] = df_filtrado['plano de manutenção'].apply(lambda x: 'Não Programada' if pd.isna(x) else 'Programada')
     os_planejamento = df_filtrado['status'].value_counts()
@@ -185,7 +169,6 @@ with col_prog1:
     else:
         st.warning("Não há dados de 'Planejamento' para esta seleção.")
 
-# Gráfico 4: OS por Prioridade
 with col_prog2:
     ordens_por_prioridade = df_filtrado["prioridade"].value_counts()
     if not ordens_por_prioridade.empty:
@@ -194,17 +177,20 @@ with col_prog2:
         ordens_existentes_ordenadas = [p for p in prioridade_ordem if p in ordens_por_prioridade.index]
         ordens_por_prioridade = ordens_por_prioridade.reindex(ordens_existentes_ordenadas)
         
+        # Correção: redefinir o índice para que o Matplotlib possa plotar
+        ordens_por_prioridade.index = range(len(ordens_por_prioridade))
+        
         fig4 = plot_bar_chart(ordens_por_prioridade,
                               f"Ordens de Serviço por Prioridade ({ano_sel})",
                               "Prioridade", "Quantidade de OS")
+        # Ajusta os ticks do eixo X para mostrar os nomes das prioridades
+        plt.xticks(ticks=range(len(ordens_existentes_ordenadas)), labels=ordens_existentes_ordenadas)
     else:
         st.warning("Não há dados de 'Prioridade' para esta seleção.")
 
-# ---
 st.subheader("Análise de Técnicos")
 col_tec1, _ = st.columns(2)
 
-# Gráfico 5: OS por Técnico Resolvedor
 with col_tec1:
     ordens_por_tecnico = df_filtrado["técnico resolvedor"].value_counts().head(10)
     if not ordens_por_tecnico.empty:
@@ -215,7 +201,6 @@ with col_tec1:
         st.warning("Não há dados de 'Técnico Resolvedor' para esta seleção.")
 
 
-# ===== Download dos Gráficos =====
 st.sidebar.header("Download")
 fig_objects = {"Mês": fig1, "Tipo": None, "Planejamento": None, "Prioridade": None, "Técnico": None}
 if 'fig2' in locals(): fig_objects["Tipo"] = fig2
