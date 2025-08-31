@@ -29,7 +29,6 @@ else:
 
 # Se o arquivo padrão não existe ou não foi carregado, exibe o uploader
 if st.session_state.file_to_read is None:
-    # Exibe o file_uploader
     uploaded = st.file_uploader("Selecione a planilha (.xlsx)", type=["xlsx"])
     if uploaded is not None:
         file_to_read = uploaded
@@ -38,12 +37,10 @@ if st.session_state.file_to_read is None:
         st.warning("Nenhum arquivo padrão encontrado. Por favor, faça o upload de uma planilha para continuar.")
         st.stop()
 else:
-    # Se já há um arquivo na session_state (do upload ou do arquivo padrão), usa ele
     file_to_read = st.session_state.file_to_read
 
 # ===== Leitura e preparo =====
 try:
-    # Reinicia o cursor do arquivo para o início, caso ele já tenha sido lido
     if hasattr(file_to_read, 'seek'):
         file_to_read.seek(0)
     df = pd.read_excel(file_to_read)
@@ -80,24 +77,19 @@ df_temp = df[df["Ano"] == ano_sel].copy()
 unidades = sorted(df_temp["Unidade"].dropna().unique())
 unidade_sel = st.sidebar.selectbox("Filtrar por unidade", ["Todas"] + unidades)
 
-# Cria o DataFrame filtrado final
 df_filtrado = df_temp.copy()
 if unidade_sel != "Todas":
     df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_sel].copy()
 
-# Filtro 3: Mês (Agora que df_filtrado existe, a variável 'MesNum' pode ser acessada)
+# Filtro 3: Mês
 nomes_meses_dict = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
                     5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
                     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
-
-# Pega apenas os meses presentes no df_filtrado para o selectbox do mês
 meses_presentes = sorted(df_filtrado['MesNum'].unique())
 opcoes_meses_filtradas = {num: nomes_meses_dict[num] for num in meses_presentes}
 mes_sel_text = st.sidebar.selectbox("Filtrar por mês", ["Todos"] + list(opcoes_meses_filtradas.values()))
 
-# Aplica o último filtro, de mês
 if mes_sel_text != "Todos":
-    # Encontra o número do mês a partir do nome selecionado
     mes_num = next(num for num, name in nomes_meses_dict.items() if name == mes_sel_text)
     df_filtrado = df_filtrado[df_filtrado['MesNum'] == mes_num].copy()
 
@@ -120,18 +112,15 @@ def plot_bar_chart(data, title, x_label, y_label, p=None):
     fig, ax = plt.subplots(figsize=(10, 6))
     data.plot(kind="bar", ax=ax, color='skyblue')
     
-    # Adiciona rótulos de dados
     for i, valor in enumerate(data):
         ax.text(i, valor, str(int(valor)), ha='center', va='bottom', fontsize=10)
 
-    # Aumenta a fonte do título e dos rótulos dos eixos
     ax.set_title(title, fontsize=16)
     ax.set_xlabel(x_label, fontsize=12)
     ax.set_ylabel(y_label, fontsize=12)
     ax.tick_params(axis='x', labelsize=10)
     ax.tick_params(axis='y', labelsize=10)
     
-    # Se a linha de tendência foi calculada, plota ela aqui
     if p:
         x_trend = np.arange(len(data))
         ax.plot(x_trend, p(x_trend + 1), "r--", label="Linha de Tendência")
@@ -142,7 +131,7 @@ def plot_bar_chart(data, title, x_label, y_label, p=None):
     st.pyplot(fig, clear_figure=True)
     return fig
 
-# Nova função para gerar gráficos de pizza
+# Função para gerar gráficos de pizza
 def plot_pie_chart(data, title):
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.pie(data, labels=data.index, autopct='%1.1f%%', startangle=90, colors=plt.cm.Paired.colors)
@@ -164,7 +153,7 @@ with col_graf1:
         y_trend = ordens_por_mes_num.values
         z = np.polyfit(x_trend, y_trend, 1)
         p = np.poly1d(z)
-
+    
     ordens_por_mes_plot = ordens_por_mes_num.reindex(range(1, 13), fill_value=0)
     ordens_por_mes_plot.index = [nomes_meses_dict[m] for m in ordens_por_mes_plot.index]
     
@@ -175,9 +164,12 @@ with col_graf1:
 # Gráfico 2: Quantidade de OS por Tipo
 with col_graf2:
     ordens_por_tipo = df_filtrado["Tipo de Manutenção"].value_counts().head(10)
-    fig2 = plot_bar_chart(ordens_por_tipo,
-                          f"Top 10 OS por Tipo de Manutenção ({ano_sel})",
-                          "Tipo", "Quantidade de OS")
+    if not ordens_por_tipo.empty:
+        fig2 = plot_bar_chart(ordens_por_tipo,
+                              f"Top 10 OS por Tipo de Manutenção ({ano_sel})",
+                              "Tipo", "Quantidade de OS")
+    else:
+        st.warning("Não há dados de 'Tipo de Manutenção' para esta seleção.")
 
 # ---
 st.subheader("Análise de Prioridade e Planejamento")
@@ -187,19 +179,24 @@ col_prog1, col_prog2 = st.columns(2)
 with col_prog1:
     df_filtrado['Status'] = df_filtrado['Plano de Manutenção'].apply(lambda x: 'Não Programada' if pd.isna(x) else 'Programada')
     os_planejamento = df_filtrado['Status'].value_counts()
-    fig3 = plot_pie_chart(os_planejamento,
-                          f"OS Programada x Não Programada ({ano_sel})")
+    if not os_planejamento.empty:
+        fig3 = plot_pie_chart(os_planejamento,
+                              f"OS Programada x Não Programada ({ano_sel})")
+    else:
+        st.warning("Não há dados de 'Planejamento' para esta seleção.")
 
-# Gráfico 4: OS por Prioridade (Novo!)
+# Gráfico 4: OS por Prioridade
 with col_prog2:
     ordens_por_prioridade = df_filtrado["Prioridade"].value_counts()
-    # Adiciona uma lógica para ordenar por prioridade (ex: Alta, Média, Baixa)
-    prioridade_ordem = ['Urgente', 'Alta', 'Média', 'Baixa', 'Não-classificada']
-    ordens_por_prioridade = ordens_por_prioridade.reindex(prioridade_ordem, fill_value=0)
-    
-    fig4 = plot_bar_chart(ordens_por_prioridade,
-                          f"Ordens de Serviço por Prioridade ({ano_sel})",
-                          "Prioridade", "Quantidade de OS")
+    if not ordens_por_prioridade.empty:
+        prioridade_ordem = ['Urgente', 'Alta', 'Média', 'Baixa', 'Não-classificada']
+        ordens_por_prioridade = ordens_por_prioridade.reindex(prioridade_ordem, fill_value=0)
+        
+        fig4 = plot_bar_chart(ordens_por_prioridade,
+                              f"Ordens de Serviço por Prioridade ({ano_sel})",
+                              "Prioridade", "Quantidade de OS")
+    else:
+        st.warning("Não há dados de 'Prioridade' para esta seleção.")
 
 # ---
 st.subheader("Análise de Técnicos")
@@ -208,20 +205,24 @@ col_tec1, _ = st.columns(2)
 # Gráfico 5: OS por Técnico Resolvedor
 with col_tec1:
     ordens_por_tecnico = df_filtrado["Técnico Resolvedor"].value_counts().head(10)
-    fig5 = plot_bar_chart(ordens_por_tecnico,
-                          f"Top 10 OS por Técnico Resolvedor ({ano_sel})",
-                          "Técnico", "Quantidade de OS")
+    if not ordens_por_tecnico.empty:
+        fig5 = plot_bar_chart(ordens_por_tecnico,
+                              f"Top 10 OS por Técnico Resolvedor ({ano_sel})",
+                              "Técnico", "Quantidade de OS")
+    else:
+        st.warning("Não há dados de 'Técnico Resolvedor' para esta seleção.")
 
 
 # ===== Download dos Gráficos =====
 st.sidebar.header("Download")
 for title, fig in [("Mês", fig1), ("Tipo", fig2), ("Planejamento", fig3), ("Prioridade", fig4), ("Técnico", fig5)]:
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
-    buf.seek(0)
-    st.sidebar.download_button(
-        f"Baixar Gráfico de {title} (PNG)",
-        data=buf,
-        file_name=f"ordens_por_{title.lower().replace(' ', '_')}_{ano_sel}.png",
-        mime="image/png"
-    )
+    if fig: # Verifica se a figura foi criada
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=200, bbox_inches="tight")
+        buf.seek(0)
+        st.sidebar.download_button(
+            f"Baixar Gráfico de {title} (PNG)",
+            data=buf,
+            file_name=f"ordens_por_{title.lower().replace(' ', '_')}_{ano_sel}.png",
+            mime="image/png"
+        )
